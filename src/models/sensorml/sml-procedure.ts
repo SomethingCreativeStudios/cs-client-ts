@@ -79,7 +79,7 @@ export type SmlProcedure = AnyProcedure & {
 };
 
 export const SmlProcedureSchema: z.ZodType<SmlProcedure> = AnyProcedureSchema.and(
-  z.looseObject({
+  z.object({
     definition: z.string(),
     uniqueId: z.string(),
     links: z.array(LinkSchema).optional(),

@@ -22,7 +22,7 @@ export type SmlSystem = AnySmlSystem & {
 };
 
 export const SmlSystemSchema: z.ZodType<SmlSystem> = AnySmlSystemSchema.and(
-  z.looseObject({
+  z.object({
     definition: z.string(),
     uniqueId: z.string(),
     links: z.array(LinkSchema).optional(),

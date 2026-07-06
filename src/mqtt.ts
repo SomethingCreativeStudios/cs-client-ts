@@ -1,4 +1,4 @@
-import { connect, type IClientOptions, type IClientPublishOptions, type IClientSubscribeOptions, type MqttClient } from "mqtt";
+import mqtt, { type IClientOptions, type IClientPublishOptions, type IClientSubscribeOptions, type MqttClient } from "mqtt";
 import { PubSubError } from "./pubsub/types.js";
 import type {
   PubSubPayload,
@@ -74,7 +74,7 @@ function mqttPublishOptions(options: PubSubPublishOptions | undefined): IClientP
 
 export function createMqttTransport(options: MqttTransportOptions): PubSubTransport {
   const topicPrefix = normalizeTopicPrefix(options.topicPrefix);
-  const connectMqtt = options.connect ?? connect;
+  const connectMqtt = options.connect ?? mqtt.connect;
   let client: MqttClient | undefined;
   let connectPromise: Promise<MqttClient> | undefined;
   const topicRefs = new Map<string, number>();
