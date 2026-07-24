@@ -1,14 +1,11 @@
 import { z } from "zod";
 import { abstractProcessShape, ProcessMethodSchema } from "./abstract-process.js";
 import { physicalProcessShape } from "./physical-process.js";
+import { PathRefSchema } from "./path-ref.js";
 import { SoftNamedPropertyShape } from "../swe/basic-types.js";
 import { XLinkSchema } from "../common/link.js";
 
-/** Path reference into a process's own inputs/outputs/parameters/modes/components tree. */
-export const PathRefSchema = z
-  .string()
-  .regex(/^(components|inputs|outputs|parameters|modes)\/([A-Za-z][A-Za-z0-9_-]*\/)*[A-Za-z][A-Za-z0-9_-]*$/);
-export type PathRef = z.infer<typeof PathRefSchema>;
+export { PATH_REF_PATTERN, PathRefSchema, type PathRef } from "./path-ref.js";
 
 export const ConnectionListSchema = z
   .array(z.object({ source: PathRefSchema, destination: PathRefSchema }))

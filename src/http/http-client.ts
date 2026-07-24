@@ -115,6 +115,8 @@ export interface RequestOptions<T> {
   accept?: string;
   contentType?: string;
   body?: unknown;
+  /** Set to false when the request body is already encoded text/binary data. Defaults to JSON serialization. */
+  serializeBody?: boolean;
   /** Zod schema used to validate (and produce) the response body, when one is expected. */
   schema?: z.ZodType<T>;
   /** Human-readable resource name, used in ValidationError messages. */
@@ -246,7 +248,11 @@ export class HttpClient {
       init: {
         method,
         headers,
-        body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+        body: opts.body !== undefined
+          ? opts.serializeBody === false
+            ? opts.body as RequestInit["body"]
+            : JSON.stringify(opts.body)
+          : undefined,
       },
     };
 
@@ -362,8 +368,16 @@ export class HttpClient {
   }
 
   /** POST helper that returns the created resource's id, extracted from the `Location` response header. */
-  async create(path: string, body: unknown, opts: { contentType?: string } = {}): Promise<string> {
-    const { response } = await this.request("POST", path, { body, contentType: opts.contentType });
+  async create(
+    path: string,
+    body: unknown,
+    opts: { contentType?: string; serializeBody?: boolean } = {},
+  ): Promise<string> {
+    const { response } = await this.request("POST", path, {
+      body,
+      contentType: opts.contentType,
+      serializeBody: opts.serializeBody,
+    });
     const location = response.headers.get("location");
     if (!location) {
       throw new HttpError(`POST to ${path} did not return a Location header`, response.status, this.resolveUrl(path));

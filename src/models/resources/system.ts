@@ -1,6 +1,5 @@
 import type { Link, XLink } from "../common/link.js";
 import type { TimePeriod } from "../common/time.js";
-import type { Geometry } from "../common/geometry.js";
 import type { AssetType } from "../common/uris.js";
 import type {
   Term,
@@ -39,13 +38,24 @@ export interface System {
   /** System kind, normalized to the SensorML `typeOf` name even when read from GeoJSON `systemKind@link`. */
   typeOf?: XLink;
 
-  // Cross-encoding fields. GeoJSON carries the location as `geometry`; SensorML
-  // carries it as `position`, so `position` is the normalized common field.
+  // Server-provided association links promoted from GeoJSON `links`. SensorML
+  // carries the parent system as `attachedTo`, so `parentSystem` is normalized
+  // from either representation.
+  parentSystem?: Link;
+  subsystems?: Link;
+  samplingFeatures?: Link;
+  deployments?: Link;
+  procedures?: Link;
+  datastreams?: Link;
+  controlstreams?: Link;
+
+  // Cross-encoding fields. GeoJSON carries the location as `geometry` on the
+  // wire; SensorML carries it as `position`. `position` is the normalized common
+  // field and can hold geometry-like values.
   assetType?: AssetType | string;
   position?: Position;
 
   // GeoJSON wire details retained for round-tripping/debugging.
-  geometry?: Geometry | null;
   bbox?: number[];
 
   // SensorML-only
@@ -77,4 +87,13 @@ export interface System {
 }
 
 /** Fields a caller may set when creating/updating a System, independent of target encoding. */
-export type SystemInput = Omit<System, "sourceEncoding" | "id" | "raw">;
+type SystemServerLinkKey =
+  | "parentSystem"
+  | "subsystems"
+  | "samplingFeatures"
+  | "deployments"
+  | "procedures"
+  | "datastreams"
+  | "controlstreams";
+
+export type SystemInput = Omit<System, "sourceEncoding" | "id" | "raw" | SystemServerLinkKey>;

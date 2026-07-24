@@ -33,6 +33,9 @@ export interface Procedure {
   validTime?: TimePeriod;
   links?: Link[];
 
+  // Server-provided association link promoted from `links`.
+  implementingSystems?: Link;
+
   // SensorML-only
   processType?: "SimpleProcess" | "AggregateProcess" | "PhysicalComponent" | "PhysicalSystem";
   lang?: string;
@@ -60,4 +63,4 @@ export interface Procedure {
   raw: ProcedureFeature | SmlProcedure;
 }
 
-export type ProcedureInput = Omit<Procedure, "sourceEncoding" | "id" | "raw">;
+export type ProcedureInput = Omit<Procedure, "sourceEncoding" | "id" | "raw" | "implementingSystems">;

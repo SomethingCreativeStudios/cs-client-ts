@@ -16,7 +16,16 @@ export interface SamplingFeature {
   bbox?: number[];
   sampledFeatureLink: Link;
   links?: Link[];
+
+  // Server-provided association links promoted from `links`.
+  parentSystem?: Link;
+  sampleOf?: Link;
+  datastreams?: Link;
+  controlstreams?: Link;
+
   raw: SamplingFeatureWire;
 }
 
-export type SamplingFeatureInput = Omit<SamplingFeature, "sourceEncoding" | "id" | "raw">;
+type SamplingFeatureServerLinkKey = "parentSystem" | "sampleOf" | "datastreams" | "controlstreams";
+
+export type SamplingFeatureInput = Omit<SamplingFeature, "sourceEncoding" | "id" | "raw" | SamplingFeatureServerLinkKey>;

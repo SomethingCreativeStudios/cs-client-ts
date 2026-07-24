@@ -28,6 +28,7 @@ describe("systemFromGeoJson", () => {
     expect(system.assetType).toBe("Equipment");
     expect(system.position?.type).toBe("Point");
     expect(system.typeOf?.href).toContain("procedures/TP60S");
+    expect((system as unknown as Record<string, unknown>).geometry).toBeUndefined();
     expect((system as unknown as Record<string, unknown>).systemKindLink).toBeUndefined();
     // SML-only fields must be absent
     expect(system.inputs).toBeUndefined();
@@ -41,8 +42,40 @@ describe("systemFromGeoJson", () => {
       label: "Thermometer",
       featureType: "http://www.w3.org/ns/sosa/Sensor",
       typeOf: { href: "https://api.example.org/procedures/p1", title: "Procedure" },
+      position: { type: "Point", coordinates: [1, 2] },
     });
     expect(feature.properties["systemKind@link"]?.href).toBe("https://api.example.org/procedures/p1");
+    expect(feature.geometry).toEqual({ type: "Point", coordinates: [1, 2] });
+  });
+
+  it("promotes server-provided relation links and keeps editable links separate", () => {
+    const feature = SystemFeatureSchema.parse({
+      ...loadGeojson("uav-platform-geojson.json"),
+      links: [
+        { href: "/systems/child", rel: "self" },
+        { href: "/systems/parent", rel: "ogc-rel:parentSystem" },
+        { href: "/systems/child/subsystems", rel: "ogc-rel:subsystems" },
+        { href: "/systems/child/datastreams", rel: "datastreams" },
+      ],
+    });
+    const system = systemFromGeoJson(feature);
+    expect(system.parentSystem?.href).toBe("/systems/parent");
+    expect(system.subsystems?.href).toBe("/systems/child/subsystems");
+    expect(system.datastreams?.href).toBe("/systems/child/datastreams");
+    expect(system.links).toEqual([{ href: "/systems/child", rel: "self" }]);
+  });
+
+  it("does not serialize server-provided relation links", () => {
+    const feature = systemToGeoJson({
+      uniqueId: "urn:x:1",
+      label: "Thermometer",
+      featureType: "http://www.w3.org/ns/sosa/Sensor",
+      links: [
+        { href: "/systems/1", rel: "self" },
+        { href: "/systems/1/subsystems", rel: "ogc-rel:subsystems" },
+      ],
+    });
+    expect(feature.links).toEqual([{ href: "/systems/1", rel: "self" }]);
   });
 });
 
@@ -55,8 +88,6 @@ describe("systemFromSml", () => {
     expect(system.processType).toBe("PhysicalSystem");
     expect(system.characteristics?.length).toBeGreaterThan(0);
     expect(system.components?.length).toBe(5);
-    // GeoJSON-only fields must be absent
-    expect(system.geometry).toBeUndefined();
     expect(system.assetType).toBeUndefined();
     expect(system.raw).toBe(doc);
   });
@@ -65,7 +96,8 @@ describe("systemFromSml", () => {
     const doc = loadSml("sensor_instance_with_geojson_location.json");
     const system = systemFromSml(doc);
     expect(system.position).toBeDefined();
-    expect(system.geometry?.type).toBe("Point");
+    expect(system.position?.type).toBe("Point");
+    expect((system as unknown as Record<string, unknown>).geometry).toBeUndefined();
   });
 
   it("maps SensorML cs:AssetType classifiers to common assetType", () => {
@@ -98,5 +130,12 @@ describe("systemFromSml", () => {
       assetType: "Equipment",
     });
     expect(doc.classifiers).toContainEqual({ definition: "cs:AssetType", label: "Asset Type", value: "Equipment" });
+  });
+
+  it("normalizes SensorML attachedTo as parentSystem", () => {
+    const doc = loadSml("sensor_instance_with_parent_and_frame.json");
+    const system = systemFromSml(doc);
+    expect(system.parentSystem?.href).toBe(system.attachedTo?.href);
+    expect(system.parentSystem?.href).toBe("http://link/to/parent/sensor");
   });
 });

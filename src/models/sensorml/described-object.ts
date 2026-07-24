@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PathRefSchema } from "./path-ref.js";
 import { XLinkSchema } from "../common/link.js";
 import { TimePeriodSchema } from "../common/time.js";
 import { AnySimpleComponentSchema, VectorComponentSchema, DataArrayComponentSchema } from "../swe/any-component.js";
@@ -79,7 +80,7 @@ export const LegalConstraintSchema = z.looseObject({
 });
 export type LegalConstraint = z.infer<typeof LegalConstraintSchema>;
 
-const settingShape = { ref: z.string() };
+const settingShape = { ref: PathRefSchema };
 export const SettingsSchema = z.looseObject({
   setValues: z
     .array(z.looseObject({ ...settingShape, value: z.union([z.number(), z.string()]) }))

@@ -1,6 +1,6 @@
 import { HttpClient } from "../http/http-client.js";
 import { mapPage, type Page } from "../http/pagination.js";
-import type { DateTimeQuery, KeywordQuery, QueryParams } from "../http/query.js";
+import type { BboxQuery, DateTimeQuery, KeywordQuery, QueryParams } from "../http/query.js";
 import { DualEncodingEndpoint } from "./base-endpoint.js";
 import { SystemFeatureSchema, type SystemFeature } from "../models/geojson/system-feature.js";
 import { SmlSystemSchema, type SmlSystem } from "../models/sensorml/sml-system.js";
@@ -18,7 +18,7 @@ export type SystemFormat = "geojson" | "sml" | "common";
 
 export interface SystemQueryParams extends QueryParams {
   id?: string[];
-  bbox?: [number, number, number, number];
+  bbox?: BboxQuery;
   datetime?: DateTimeQuery;
   geom?: string;
   q?: KeywordQuery;
@@ -37,7 +37,7 @@ export interface SystemGetOptions {
 
 export interface SystemDeploymentQueryParams extends QueryParams {
   id?: string[];
-  bbox?: [number, number, number, number];
+  bbox?: BboxQuery;
   datetime?: DateTimeQuery;
   geom?: string;
   q?: KeywordQuery;

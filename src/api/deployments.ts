@@ -1,6 +1,6 @@
 import { HttpClient } from "../http/http-client.js";
 import { mapPage, type Page } from "../http/pagination.js";
-import type { DateTimeQuery, KeywordQuery, QueryParams } from "../http/query.js";
+import type { BboxQuery, DateTimeQuery, KeywordQuery, QueryParams } from "../http/query.js";
 import { DualEncodingEndpoint } from "./base-endpoint.js";
 import { DeploymentFeatureSchema, type DeploymentFeature } from "../models/geojson/deployment-feature.js";
 import { SmlDeploymentSchema, type SmlDeployment } from "../models/sensorml/sml-deployment.js";
@@ -12,7 +12,7 @@ const DEFAULT_FORMAT = "sml" as const;
 
 export interface DeploymentQueryParams extends QueryParams {
   id?: string[];
-  bbox?: [number, number, number, number];
+  bbox?: BboxQuery;
   datetime?: DateTimeQuery;
   geom?: string;
   q?: KeywordQuery;

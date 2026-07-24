@@ -25,6 +25,7 @@ export const CommandSchema = z.looseObject({
   sender: z.string().min(1).optional(),
   currentStatus: CommandStatusCodeSchema.optional(),
   parameters: z.unknown(),
+  links: z.array(LinkSchema).optional(),
 });
 export type Command = z.infer<typeof CommandSchema>;
 
@@ -63,6 +64,7 @@ function exactlyOneCommandResult(ctx: z.core.ParsePayload<Record<string, unknown
 const commandResultResponseShape = {
   id: z.string().min(1),
   "command@id": z.string().min(1),
+  links: z.array(LinkSchema).optional(),
 };
 
 const commandResultCreateShape = {
@@ -103,6 +105,7 @@ export const CommandStatusSchema = z.looseObject({
   executionTime: TimePeriodSchema.optional(),
   message: z.string().min(1).optional(),
   results: z.array(CommandResultSchema).optional(),
+  links: z.array(LinkSchema).optional(),
 });
 export type CommandStatus = z.infer<typeof CommandStatusSchema>;
 

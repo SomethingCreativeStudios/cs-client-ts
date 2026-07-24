@@ -1,4 +1,5 @@
 export * from "./described-object.js";
+export * from "./path-ref.js";
 export * from "./pose.js";
 export * from "./abstract-process.js";
 export * from "./physical-process.js";

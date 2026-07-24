@@ -34,6 +34,30 @@ describe("CSApiClient.systemEvents", () => {
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("PUT");
     expect(fetchMock.mock.calls[1]?.[1]?.method).toBe("DELETE");
   });
+
+  it("supports canonical global event item operations", async () => {
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => init?.method === "GET"
+      ? jsonResponse(event)
+      : new Response(null, { status: 204 }));
+    const client = new CSApiClient({ baseUrl: "https://api.example.org", fetch: fetchMock as unknown as typeof fetch });
+
+    expect((await client.systemEvents.getGlobal("ev1")).id).toBe("ev1");
+    await client.systemEvents.updateGlobal("ev1", event);
+    await client.systemEvents.deleteGlobal("ev1");
+
+    expect(fetchMock.mock.calls.map(call => [call[0], call[1]?.method])).toEqual([
+      ["https://api.example.org/systemEvents/ev1", "GET"],
+      ["https://api.example.org/systemEvents/ev1", "PUT"],
+      ["https://api.example.org/systemEvents/ev1", "DELETE"],
+    ]);
+  });
+
+  it("uses the Part 2 eventTime query name and preserves deprecated datetime", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse({ items: [], links: [] }));
+    const client = new CSApiClient({ baseUrl: "https://api.example.org", fetch: fetchMock as unknown as typeof fetch });
+    await client.systemEvents.listGlobal({ datetime: { start: "2024-01-01T00:00:00Z" } });
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("eventTime=2024-01-01T00%3A00%3A00Z%2F..");
+  });
 });
 
 describe("CSApiClient.systemHistory", () => {

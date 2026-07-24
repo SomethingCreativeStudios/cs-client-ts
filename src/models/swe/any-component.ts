@@ -157,11 +157,24 @@ export type CategoryRangeComponent = z.infer<typeof CategoryRangeComponentSchema
 /** A named slot holding either an inline component or a link to one (`AssociationAttributeGroup`). */
 export type NamedComponentSlot = { name: string } & (AnyComponent | z.infer<typeof AssociationAttributeGroupSchema>);
 
+const NamedLinkSchema = z.looseObject({ ...SoftNamedPropertyShape, ...AssociationAttributeGroupSchema.shape });
+const NamedInlineComponentShape = z.looseObject({ ...SoftNamedPropertyShape });
+
+/**
+ * A named slot is either a link (`href`, no `type`) or an inline component (`type`, no `href`).
+ * Routed by hand via `superRefine` rather than `union(...).and(...)`: a plain `z.union` collapses
+ * whichever branch's errors it reports into a generic "no union member matched" issue, discarding
+ * the specific nested error (e.g. a `Quantity` component missing `uom`). Checking `href`/`type` up
+ * front and delegating to the one matching schema preserves that nested detail.
+ */
 const NamedComponentOrLinkSchema: z.ZodType<NamedComponentSlot> = z.lazy(() =>
-  z.union([
-    z.looseObject({ ...SoftNamedPropertyShape, ...AssociationAttributeGroupSchema.shape }),
-    z.looseObject({ ...SoftNamedPropertyShape }).and(AnyComponentSchema),
-  ]),
+  z.custom<NamedComponentSlot>().superRefine((value, ctx) => {
+    const isLink = !!value && typeof value === "object" && "href" in value && !("type" in value);
+    const result = isLink ? NamedLinkSchema.safeParse(value) : NamedInlineComponentShape.and(AnyComponentSchema).safeParse(value);
+    if (!result.success) {
+      for (const issue of result.error.issues) ctx.addIssue(issue as z.core.$ZodSuperRefineIssue);
+    }
+  }),
 ) as z.ZodType<NamedComponentSlot>;
 
 export interface DataRecordComponent {
@@ -347,9 +360,15 @@ const AnySimpleComponentSchema = z.discriminatedUnion("type", [
   CategoryRangeComponentSchema,
 ]);
 
-/** The full recursive SWE Common component union. See module docs for the recursion knot rationale. */
-export const AnyComponentSchema: z.ZodType<AnyComponent> = z.lazy(() =>
-  z.union([
+/**
+ * The full recursive SWE Common component union. See module docs for the recursion knot rationale.
+ *
+ * Discriminated on `type` (rather than a plain `z.union`) so that a payload with a recognized
+ * `type` whose validation fails for some other reason reports that specific nested error
+ * (e.g. a `Quantity` missing `uom`) instead of Zod's generic "no union member matched" issue.
+ */
+export const AnyComponentSchema = z.lazy(() =>
+  z.discriminatedUnion("type", [
     AnySimpleComponentSchema,
     DataRecordComponentSchema,
     VectorComponentSchema,
@@ -357,7 +376,7 @@ export const AnyComponentSchema: z.ZodType<AnyComponent> = z.lazy(() =>
     MatrixComponentSchema,
     DataChoiceComponentSchema,
     SweGeometryComponentSchema,
-  ]),
-);
+  ] as unknown as [z.core.$ZodTypeDiscriminable<"type">, ...z.core.$ZodTypeDiscriminable<"type">[]]),
+) as unknown as z.ZodType<AnyComponent>;
 
 export { AnyScalarComponentSchema, AnySimpleComponentSchema };

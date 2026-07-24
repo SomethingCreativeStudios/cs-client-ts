@@ -40,9 +40,27 @@ describe("DataStreamSchema", () => {
     expectParses(DataStreamSchema, file, load("datastream", file));
   });
 
-  it("rejects datastream responses missing OpenAPI-required live", () => {
+  it("normalizes omitted nullable response fields while preserving strict identity fields", () => {
     const result = DataStreamSchema.safeParse(load("datastream", "datastream-external-link-edr.json"));
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.live).toBeNull();
+  });
+
+  it("derives formats from an echoed write-only schema", () => {
+    const source = load("datastream", "datastream-simple.json") as Record<string, unknown>;
+    const result = DataStreamSchema.parse({
+      ...source,
+      formats: undefined,
+      phenomenonTime: undefined,
+      resultTime: undefined,
+      schema: { obsFormat: "application/json" },
+    });
+
+    expect(result.formats).toEqual(["application/json"]);
+    expect(result.phenomenonTime).toBeNull();
+    expect(result.resultTime).toBeNull();
+    expect(result.schema).toEqual({ obsFormat: "application/json" });
   });
 
   it("requires the OpenAPI response fields", () => {
@@ -59,6 +77,30 @@ describe("ControlStreamSchema", () => {
   it("requires the OpenAPI response fields", () => {
     const result = ControlStreamSchema.safeParse({ name: "PTZ" });
     expect(result.success).toBe(false);
+  });
+
+  it("defaults omitted response state and ignores an invalid echoed write-only schema", () => {
+    const source = load("controlstream", jsonFiles("controlstream")[0]!) as Record<string, unknown>;
+    const result = ControlStreamSchema.parse({
+      ...source,
+      issueTime: undefined,
+      executionTime: undefined,
+      live: undefined,
+      async: undefined,
+      schema: {
+        commandFormat: "application/json",
+        parametersSchema: {
+          type: "Quantity",
+          definition: "urn:test:speed",
+        },
+      },
+    });
+
+    expect(result.issueTime).toBeNull();
+    expect(result.executionTime).toBeNull();
+    expect(result.live).toBeNull();
+    expect(result.async).toBe(false);
+    expect(result.schema).toBeUndefined();
   });
 });
 
@@ -88,6 +130,17 @@ describe("ObservationSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("models response links as first-class fields", () => {
+    const result = ObservationSchema.parse({
+      id: "o1",
+      "datastream@id": "ds1",
+      resultTime: "2020-01-01T00:00:00Z",
+      result: 1,
+      links: [{ href: "/observations/o1", rel: "self" }],
+    });
+    expect(result.links?.[0]?.rel).toBe("self");
+  });
 });
 
 describe("CommandSchema", () => {
@@ -99,6 +152,17 @@ describe("CommandSchema", () => {
     const createPayload = load("command", "uav-mission.json");
     expect(CommandSchema.safeParse(createPayload).success).toBe(false);
     expectParses(CommandCreateSchema, "uav-mission.json", createPayload);
+  });
+
+  it("models response links as first-class fields", () => {
+    const result = CommandSchema.parse({
+      id: "c1",
+      "controlstream@id": "cs1",
+      issueTime: "2020-01-01T00:00:00Z",
+      parameters: {},
+      links: [{ href: "/commands/c1", rel: "self" }],
+    });
+    expect(result.links?.[0]?.rel).toBe("self");
   });
 });
 

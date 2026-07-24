@@ -25,17 +25,22 @@ export interface Deployment {
   validTime: TimePeriod;
   links?: Link[];
 
+  // Server-provided association links promoted from `links`.
+  parentDeployment?: Link;
+  subdeployments?: Link;
+  featuresOfInterest?: Link;
+  samplingFeatures?: Link;
+  datastreams?: Link;
+  controlstreams?: Link;
+
   // Cross-encoding fields. GeoJSON carries the location as `geometry`; SensorML
   // carries it as `location`, so `location` is the normalized common field.
   location?: Geometry;
   platform?: DeployedSystem;
   deployedSystems?: NamedDeployedSystem[];
 
-  // GeoJSON wire details retained for round-tripping/debugging.
-  geometry?: Geometry | null;
+  // GeoJSON-only extent retained because it has no SensorML equivalent.
   bbox?: number[];
-  platformLink?: Link;
-  deployedSystemsLink?: Link[];
 
   // SensorML-only
   lang?: string;
@@ -50,4 +55,12 @@ export interface Deployment {
   raw: DeploymentFeature | SmlDeployment;
 }
 
-export type DeploymentInput = Omit<Deployment, "sourceEncoding" | "id" | "raw">;
+type DeploymentServerLinkKey =
+  | "parentDeployment"
+  | "subdeployments"
+  | "featuresOfInterest"
+  | "samplingFeatures"
+  | "datastreams"
+  | "controlstreams";
+
+export type DeploymentInput = Omit<Deployment, "sourceEncoding" | "id" | "raw" | DeploymentServerLinkKey>;

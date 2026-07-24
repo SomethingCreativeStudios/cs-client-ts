@@ -35,6 +35,7 @@ export const ObservationSchema = z
     id: z.string().min(1),
     "datastream@id": z.string().min(1),
     resultTime: z.string(),
+    links: z.array(LinkSchema).optional(),
     ...observationShape,
   })
   .check(exactlyOneObservationResult);

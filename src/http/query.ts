@@ -9,6 +9,9 @@ export interface TimeInterval {
 
 export type DateTimeQuery = DateTimeInstantQuery | TimeInterval;
 export type KeywordQuery = string | string[];
+export type BboxQuery =
+  | [number, number, number, number]
+  | [number, number, number, number, number, number];
 export type QueryParamValue = string | number | boolean | Date | string[] | number[] | TimeInterval | undefined;
 export type QueryParams = Record<string, QueryParamValue>;
 

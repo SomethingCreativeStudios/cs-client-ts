@@ -96,8 +96,8 @@ export class ControlStreamsApi {
     await this.http.request("PUT", `/controlstreams/${id}`, { body: controlStream, contentType: MediaTypes.json });
   }
 
-  async delete(id: string): Promise<void> {
-    await this.http.request("DELETE", `/controlstreams/${id}`);
+  async delete(id: string, opts: { cascade?: boolean } = {}): Promise<void> {
+    await this.http.request("DELETE", `/controlstreams/${id}`, { query: opts.cascade === undefined ? undefined : { cascade: opts.cascade } });
   }
 
   /** `cmdFormat` is optional per the spec (unlike datastream `obsFormat`, which is required). */
@@ -125,5 +125,13 @@ export class ControlStreamsApi {
   async createCommand(id: string, command: CommandCreate): Promise<string> {
     const validated = CommandCreateSchema.parse(command);
     return this.http.create(`/controlstreams/${id}/commands`, validated, { contentType: MediaTypes.json });
+  }
+
+  /** Post a command already encoded according to the selected control-stream format. */
+  async createEncodedCommand(id: string, payload: unknown, commandFormat: string): Promise<string> {
+    return this.http.create(`/controlstreams/${id}/commands`, payload, {
+      contentType: commandFormat,
+      serializeBody: commandFormat.includes("json"),
+    });
   }
 }

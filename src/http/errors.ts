@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 
 /** Base class for all errors raised by this client. */
 export class CsApiError extends Error {}
@@ -40,7 +40,7 @@ export class ValidationError extends CsApiError {
     public readonly zodError: z.ZodError,
     public readonly resource: string,
   ) {
-    super(message);
+    super(`${message}:\n${z.prettifyError(zodError)}`);
     this.name = "ValidationError";
   }
 }

@@ -60,6 +60,20 @@ describe("CSApiClient.datastreams", () => {
     expect(id).toBe("o1");
   });
 
+  it("createEncodedObservation() preserves the selected wire format", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(null, {
+      status: 201,
+      headers: { location: "https://api.example.org/observations/o2" },
+    }));
+    const client = new CSApiClient({ baseUrl: "https://api.example.org", fetch: fetchMock as unknown as typeof fetch });
+
+    await client.datastreams.createEncodedObservation("ds1", "2024-01-01T00:00:00Z,42", "application/swe+csv");
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.example.org/datastreams/ds1/observations");
+    expect((fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>)["content-type"]).toBe("application/swe+csv");
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe("2024-01-01T00:00:00Z,42");
+  });
+
   it("list() maps deprecated keyword to the spec q query parameter", async () => {
     const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => jsonResponse({ items: [], links: [] }));
     const client = new CSApiClient({ baseUrl: "https://api.example.org", fetch: fetchMock as unknown as typeof fetch });
@@ -78,5 +92,12 @@ describe("CSApiClient.datastreams", () => {
 
     const [url] = fetchMock.mock.calls[0]!;
     expect(url).toBe("https://api.example.org/systems/sys1/datastreams?q=live%2Crecent&datetime=now%2F..");
+  });
+
+  it("delete() forwards the Part 2 cascade query parameter", async () => {
+    const fetchMock = vi.fn(async (_url: string, _init?: RequestInit) => new Response(null, { status: 204 }));
+    const client = new CSApiClient({ baseUrl: "https://api.example.org", fetch: fetchMock as unknown as typeof fetch });
+    await client.datastreams.delete("ds1", { cascade: true });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://api.example.org/datastreams/ds1?cascade=true");
   });
 });

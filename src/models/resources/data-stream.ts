@@ -1,12 +1,18 @@
 import { z } from "zod";
-import { baseStreamInputShape, baseStreamShape, ObservedOrControlledPropertySchema, StreamLinksShape } from "./base-stream.js";
+import {
+  baseStreamInputShape,
+  baseStreamShape,
+  normalizeStreamResponse,
+  ObservedOrControlledPropertySchema,
+  StreamLinksShape,
+} from "./base-stream.js";
 import { ObservationSchemaDescriptorSchema } from "./observation-schema.js";
 import { LinkSchema } from "../common/link.js";
 import { TimePeriodSchema } from "../common/time.js";
 
 const RESULT_TYPES = ["measure", "vector", "record", "coverage", "complex"] as const;
 
-export const DataStreamSchema = z.looseObject({
+const DataStreamResponseSchema = z.looseObject({
   ...baseStreamShape,
   "system@link": LinkSchema,
   outputName: z.string().optional(),
@@ -26,6 +32,16 @@ export const DataStreamSchema = z.looseObject({
   schema: ObservationSchemaDescriptorSchema.optional(),
   ...StreamLinksShape,
 });
+
+export const DataStreamSchema = z.preprocess(
+  (value) => normalizeStreamResponse(
+    value,
+    "obsFormat",
+    ["observedProperties", "phenomenonTime", "resultTime", "resultType", "live"],
+    (schema) => ObservationSchemaDescriptorSchema.safeParse(schema).success,
+  ),
+  DataStreamResponseSchema,
+);
 export type DataStream = z.infer<typeof DataStreamSchema>;
 
 /** Payload for creating a datastream: same shape, but `schema` is required. */

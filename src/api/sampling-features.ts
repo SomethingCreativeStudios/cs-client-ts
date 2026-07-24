@@ -1,6 +1,6 @@
 import { HttpClient } from "../http/http-client.js";
 import { mapPage, type Page } from "../http/pagination.js";
-import type { DateTimeQuery, KeywordQuery, QueryParams } from "../http/query.js";
+import type { BboxQuery, DateTimeQuery, KeywordQuery, QueryParams } from "../http/query.js";
 import { DualEncodingEndpoint } from "./base-endpoint.js";
 import { SamplingFeatureGeoJsonSchema } from "../models/geojson/sampling-feature.js";
 import { samplingFeatureFromGeoJson, samplingFeatureToGeoJson } from "../codec/sampling-feature-codec.js";
@@ -8,7 +8,7 @@ import type { SamplingFeature, SamplingFeatureInput } from "../models/resources/
 
 export interface SamplingFeatureQueryParams extends QueryParams {
   id?: string[];
-  bbox?: [number, number, number, number];
+  bbox?: BboxQuery;
   datetime?: DateTimeQuery;
   geom?: string;
   q?: KeywordQuery;

@@ -2,9 +2,13 @@ import type { Procedure, ProcedureInput } from "../models/resources/procedure.js
 import type { ProcedureFeature } from "../models/geojson/procedure-feature.js";
 import type { SmlProcedure } from "../models/sensorml/sml-procedure.js";
 import { toCamelKeys, toWireKeys } from "./keys.js";
+import { findRelationLink, withoutRelationLinks } from "./relation-links.js";
+
+const PROCEDURE_SERVER_LINK_RELATIONS = ["implementingSystems"] as const;
 
 export function procedureFromGeoJson(feature: ProcedureFeature): Procedure {
   const props = toCamelKeys<Record<string, unknown>>(feature.properties);
+  const links = feature.links;
   return {
     sourceEncoding: "geojson",
     id: feature.id,
@@ -13,7 +17,8 @@ export function procedureFromGeoJson(feature: ProcedureFeature): Procedure {
     description: props.description as string | undefined,
     featureType: props.featureType as string,
     validTime: props.validTime as Procedure["validTime"],
-    links: feature.links,
+    links: withoutRelationLinks(links, PROCEDURE_SERVER_LINK_RELATIONS),
+    implementingSystems: findRelationLink(links, "implementingSystems"),
     raw: feature,
   };
 }
@@ -22,6 +27,7 @@ type AnySmlProcedureFields = Omit<Procedure, "sourceEncoding" | "raw" | "feature
 
 export function procedureFromSml(doc: SmlProcedure): Procedure {
   const d = doc as unknown as AnySmlProcedureFields;
+  const links = d.links;
   return {
     sourceEncoding: "sml",
     id: d.id,
@@ -30,7 +36,8 @@ export function procedureFromSml(doc: SmlProcedure): Procedure {
     description: d.description,
     featureType: d.definition ?? "",
     validTime: d.validTime,
-    links: d.links,
+    links: withoutRelationLinks(links, PROCEDURE_SERVER_LINK_RELATIONS),
+    implementingSystems: findRelationLink(links, "implementingSystems"),
     processType: d.type as Procedure["processType"],
     lang: d.lang,
     keywords: d.keywords,
@@ -70,7 +77,7 @@ export function procedureToGeoJson(input: ProcedureInput): ProcedureFeature {
     type: "Feature",
     geometry: null,
     properties,
-    links: input.links,
+    links: withoutRelationLinks(input.links, PROCEDURE_SERVER_LINK_RELATIONS),
   } as ProcedureFeature;
 }
 
@@ -105,6 +112,6 @@ export function procedureToSml(input: ProcedureInput): SmlProcedure {
     attachedTo: input.attachedTo,
     components: input.components,
     connections: input.connections,
-    links: input.links,
+    links: withoutRelationLinks(input.links, PROCEDURE_SERVER_LINK_RELATIONS),
   } as unknown as SmlProcedure;
 }

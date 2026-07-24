@@ -10,6 +10,8 @@ import type { System, SystemInput } from "../models/resources/system.js";
 
 export interface SystemEventQueryParams extends QueryParams {
   id?: string[];
+  eventTime?: DateTimeQuery;
+  /** @deprecated Use `eventTime`; the Part 2 wire query parameter is named `eventTime`. */
   datetime?: DateTimeQuery;
   eventType?: string[];
   q?: KeywordQuery;
@@ -22,7 +24,12 @@ export interface SystemEventQueryParams extends QueryParams {
 function normalizeKeywordQuery(params: SystemEventQueryParams | SystemHistoryQueryParams | undefined): QueryParams | undefined {
   if (!params) return undefined;
   const { keyword, ...query } = params;
-  return keyword !== undefined && query.q === undefined ? { ...query, q: keyword } : query;
+  const normalized = keyword !== undefined && query.q === undefined ? { ...query, q: keyword } : query;
+  if ('datetime' in normalized && normalized.datetime !== undefined && normalized.eventTime === undefined) {
+    const { datetime, ...rest } = normalized;
+    return { ...rest, eventTime: datetime };
+  }
+  return normalized;
 }
 
 export class SystemEventsApi {
@@ -53,6 +60,15 @@ export class SystemEventsApi {
     return data;
   }
 
+  async getGlobal(eventId: string): Promise<SystemEvent> {
+    const { data } = await this.http.request(`GET`, `/systemEvents/${eventId}`, {
+      accept: MediaTypes.json,
+      schema: SystemEventSchema,
+      resourceName: "SystemEvent",
+    });
+    return data;
+  }
+
   async create(systemId: string, event: SystemEvent): Promise<string> {
     return this.http.create(`/systems/${systemId}/events`, event, { contentType: MediaTypes.json });
   }
@@ -61,8 +77,16 @@ export class SystemEventsApi {
     await this.http.request("PUT", `/systems/${systemId}/events/${eventId}`, { body: event, contentType: MediaTypes.json });
   }
 
+  async updateGlobal(eventId: string, event: SystemEvent): Promise<void> {
+    await this.http.request("PUT", `/systemEvents/${eventId}`, { body: event, contentType: MediaTypes.json });
+  }
+
   async delete(systemId: string, eventId: string): Promise<void> {
     await this.http.request("DELETE", `/systems/${systemId}/events/${eventId}`);
+  }
+
+  async deleteGlobal(eventId: string): Promise<void> {
+    await this.http.request("DELETE", `/systemEvents/${eventId}`);
   }
 }
 

@@ -1,10 +1,16 @@
 import { z } from "zod";
-import { baseStreamInputShape, baseStreamShape, ObservedOrControlledPropertySchema, StreamLinksShape } from "./base-stream.js";
+import {
+  baseStreamInputShape,
+  baseStreamShape,
+  normalizeStreamResponse,
+  ObservedOrControlledPropertySchema,
+  StreamLinksShape,
+} from "./base-stream.js";
 import { CommandSchemaDescriptorSchema } from "./command-schema.js";
 import { LinkSchema } from "../common/link.js";
 import { TimePeriodSchema } from "../common/time.js";
 
-export const ControlStreamSchema = z.looseObject({
+const ControlStreamResponseSchema = z.looseObject({
   ...baseStreamShape,
   "system@link": LinkSchema,
   inputName: z.string().optional(),
@@ -21,6 +27,17 @@ export const ControlStreamSchema = z.looseObject({
   schema: CommandSchemaDescriptorSchema.optional(),
   ...StreamLinksShape,
 });
+
+export const ControlStreamSchema = z.preprocess(
+  (value) => normalizeStreamResponse(
+    value,
+    "commandFormat",
+    ["controlledProperties", "issueTime", "executionTime", "live"],
+    (schema) => CommandSchemaDescriptorSchema.safeParse(schema).success,
+    { async: false },
+  ),
+  ControlStreamResponseSchema,
+);
 export type ControlStream = z.infer<typeof ControlStreamSchema>;
 
 /** Payload for creating a control stream: same shape, but `schema` is required. */

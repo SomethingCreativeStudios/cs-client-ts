@@ -36,6 +36,19 @@ describe("procedure codec", () => {
     expect(procedure.validTime).toEqual(["2024-01-01T00:00:00Z", "now"]);
   });
 
+  it("promotes implementing systems and keeps other links separate", () => {
+    const feature = ProcedureFeatureSchema.parse({
+      ...(load("geojson", "procedure", "sensor-datasheet-geojson.json") as Record<string, unknown>),
+      links: [
+        { href: "/procedures/p1", rel: "self" },
+        { href: "/procedures/p1/systems", rel: "ogc-rel:implementingSystems" },
+      ],
+    });
+    const procedure = procedureFromGeoJson(feature);
+    expect(procedure.implementingSystems?.href).toBe("/procedures/p1/systems");
+    expect(procedure.links).toEqual([{ href: "/procedures/p1", rel: "self" }]);
+  });
+
   it("serializes common Procedure validTime to GeoJSON properties", () => {
     const feature = procedureToGeoJson({
       uniqueId: "urn:x:procedure:1",
@@ -44,6 +57,19 @@ describe("procedure codec", () => {
       validTime: ["2024-01-01T00:00:00Z", "now"],
     });
     expect(feature.properties.validTime).toEqual(["2024-01-01T00:00:00Z", "now"]);
+  });
+
+  it("does not serialize server-provided procedure relation links", () => {
+    const feature = procedureToGeoJson({
+      uniqueId: "urn:x:procedure:1",
+      label: "Procedure",
+      featureType: "http://www.w3.org/ns/sosa/Procedure",
+      links: [
+        { href: "/procedures/p1", rel: "self" },
+        { href: "/procedures/p1/systems", rel: "ogc-rel:implementingSystems" },
+      ],
+    });
+    expect(feature.links).toEqual([{ href: "/procedures/p1", rel: "self" }]);
   });
 
   it("maps a SensorML procedure and never carries position", () => {
@@ -61,10 +87,29 @@ describe("deployment codec", () => {
     const feature = DeploymentFeatureSchema.parse(load("geojson", "deployment", "deployment-geojson.json"));
     const deployment = deploymentFromGeoJson(feature);
     expect(deployment.uniqueId).toBe("urn:x-ogc:deployments:D001");
-    expect(deployment.platformLink?.href).toContain("systems/27559");
     expect(deployment.platform?.system.href).toContain("systems/27559");
-    expect(deployment.deployedSystemsLink?.length).toBe(3);
     expect(deployment.deployedSystems?.length).toBe(3);
+    expect(deployment.location).toEqual(feature.geometry);
+    expect((deployment as unknown as Record<string, unknown>).geometry).toBeUndefined();
+    expect((deployment as unknown as Record<string, unknown>).platformLink).toBeUndefined();
+    expect((deployment as unknown as Record<string, unknown>).deployedSystemsLink).toBeUndefined();
+  });
+
+  it("promotes deployment server links and keeps other links separate", () => {
+    const feature = DeploymentFeatureSchema.parse({
+      ...(load("geojson", "deployment", "deployment-geojson.json") as Record<string, unknown>),
+      links: [
+        { href: "/deployments/d1", rel: "self" },
+        { href: "/deployments/parent", rel: "ogc-rel:parentDeployment" },
+        { href: "/deployments/d1/subdeployments", rel: "subdeployments" },
+        { href: "/deployments/d1/controlstreams", rel: "ogc-rel:controlstreams" },
+      ],
+    });
+    const deployment = deploymentFromGeoJson(feature);
+    expect(deployment.parentDeployment?.href).toBe("/deployments/parent");
+    expect(deployment.subdeployments?.href).toBe("/deployments/d1/subdeployments");
+    expect(deployment.controlstreams?.href).toBe("/deployments/d1/controlstreams");
+    expect(deployment.links).toEqual([{ href: "/deployments/d1", rel: "self" }]);
   });
 
   it("maps a SensorML deployment", () => {
@@ -72,9 +117,10 @@ describe("deployment codec", () => {
     const deployment = deploymentFromSml(doc);
     expect(deployment.uniqueId).toBe("urn:x-saildrone:mission:2025");
     expect(deployment.deployedSystems?.length).toBe(3);
-    expect(deployment.deployedSystemsLink?.length).toBe(3);
     expect(deployment.platform?.system.href).toContain("systems/27559");
-    expect(deployment.platformLink?.href).toContain("systems/27559");
+    expect((deployment as unknown as Record<string, unknown>).geometry).toBeUndefined();
+    expect((deployment as unknown as Record<string, unknown>).platformLink).toBeUndefined();
+    expect((deployment as unknown as Record<string, unknown>).deployedSystemsLink).toBeUndefined();
   });
 
   it("serializes SensorML deployment associations to GeoJSON links", () => {
@@ -90,14 +136,28 @@ describe("deployment codec", () => {
     expect(feature.properties["deployedSystems@link"]?.[0]?.href).toBe("https://api.example.org/systems/sensor1");
   });
 
-  it("serializes GeoJSON deployment links to SensorML associations", () => {
+  it("does not serialize server-provided deployment relation links", () => {
+    const feature = deploymentToGeoJson({
+      uniqueId: "urn:x:deployment:1",
+      label: "Deployment",
+      featureType: "http://www.w3.org/ns/sosa/Deployment",
+      validTime: ["2024-01-01T00:00:00Z", "now"],
+      links: [
+        { href: "/deployments/d1", rel: "self" },
+        { href: "/deployments/d1/subdeployments", rel: "ogc-rel:subdeployments" },
+      ],
+    });
+    expect(feature.links).toEqual([{ href: "/deployments/d1", rel: "self" }]);
+  });
+
+  it("serializes normalized deployment associations to SensorML", () => {
     const doc = deploymentToSml({
       uniqueId: "urn:x:deployment:1",
       label: "Deployment",
       featureType: "http://www.w3.org/ns/sosa/Deployment",
       validTime: ["2024-01-01T00:00:00Z", "now"],
-      platformLink: { href: "https://api.example.org/systems/platform" },
-      deployedSystemsLink: [{ href: "https://api.example.org/systems/sensor1" }],
+      platform: { system: { href: "https://api.example.org/systems/platform" } },
+      deployedSystems: [{ name: "sensor1", system: { href: "https://api.example.org/systems/sensor1" } }],
     });
     expect(doc.platform?.system.href).toBe("https://api.example.org/systems/platform");
     expect(doc.deployedSystems?.[0]?.system.href).toBe("https://api.example.org/systems/sensor1");
@@ -110,6 +170,23 @@ describe("sampling feature codec", () => {
     const sf = samplingFeatureFromGeoJson(feature);
     expect(sf.uniqueId).toBe("urn:x-usgs:sites:301244087575701:sf:bottom");
     expect(sf.sampledFeatureLink.href).toContain("112TRRC");
+  });
+
+  it("promotes sampling feature server links and keeps other links separate", () => {
+    const feature = SamplingFeatureGeoJsonSchema.parse({
+      ...(load("geojson", "sampling-feature", "sampling-point-geojson.json") as Record<string, unknown>),
+      links: [
+        { href: "/samplingFeatures/sf1", rel: "self" },
+        { href: "/systems/sys1", rel: "parentSystem" },
+        { href: "/samplingFeatures/sf1/sampleOf", rel: "ogc-rel:sampleOf" },
+        { href: "/samplingFeatures/sf1/datastreams", rel: "ogc-rel:datastreams" },
+      ],
+    });
+    const sf = samplingFeatureFromGeoJson(feature);
+    expect(sf.parentSystem?.href).toBe("/systems/sys1");
+    expect(sf.sampleOf?.href).toBe("/samplingFeatures/sf1/sampleOf");
+    expect(sf.datastreams?.href).toBe("/samplingFeatures/sf1/datastreams");
+    expect(sf.links).toEqual([{ href: "/samplingFeatures/sf1", rel: "self" }]);
   });
 });
 

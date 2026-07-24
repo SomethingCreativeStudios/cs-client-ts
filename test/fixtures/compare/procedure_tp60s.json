@@ -1,0 +1,85 @@
+{
+  "type": "PhysicalSystem",
+  "definition": "http://www.w3.org/ns/sosa/Sensor",
+  "uniqueId": "urn:x-myorg:datasheets:ThermoPro:TP60S:v001",
+  "label": "ThermoPro TP60S",
+  "description": "Datasheet for the ThermoPro TP60S digital weather sensor",
+  "identifiers": [
+    {
+      "definition": "http://sensorml.com/ont/swe/property/Manufacturer",
+      "label": "Manufacturer",
+      "value": "ThermoPro"
+    },
+    {
+      "definition": "http://sensorml.com/ont/swe/property/ModelNumber",
+      "label": "Model Number",
+      "value": "TP60S"
+    }
+  ],
+  "classifiers": [
+    {
+      "definition": "http://sensorml.com/ont/swe/property/SensorType",
+      "label": "Sensor Type",
+      "value": "Thermometer"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "temp",
+      "type": "ObservableProperty",
+      "definition": "http://mmisw.org/ont/cf/parameter/air_temperature",
+      "label": "Air Temperature"
+    },
+    {
+      "name": "weather",
+      "type": "DataRecord",
+      "label": "Weather Measurements",
+      "fields": [
+        {
+          "name": "pressure",
+          "type": "Quantity",
+          "definition": "http://mmisw.org/ont/cf/parameter/air_pressure",
+          "label": "Air Pressure",
+          "uom": { "code": "hPa" },
+          "constraint": {
+            "type": "AllowedValues",
+            "intervals": [[850, 1100]]
+          }
+        },
+        {
+          "name": "dewPoint",
+          "type": "Quantity",
+          "definition": "http://mmisw.org/ont/cf/parameter/dew_point_temperature",
+          "label": "Dew Point",
+          "uom": { "code": "Cel" }
+        }
+      ]
+    }
+  ],
+  "parameters": [
+    {
+      "name": "gain",
+      "type": "Quantity",
+      "definition": "http://sensorml.com/ont/swe/property/Gain",
+      "label": "Gain",
+      "uom": { "code": "1" },
+      "value": 1.0
+    },
+    {
+      "name": "offset",
+      "type": "Quantity",
+      "definition": "http://sensorml.com/ont/swe/property/Offset",
+      "label": "Offset",
+      "uom": { "code": "Cel" },
+      "value": 0.0
+    },
+    {
+      "name": "samplingRate",
+      "type": "Quantity",
+      "definition": "http://sensorml.com/ont/swe/property/SamplingRate",
+      "label": "Sampling Rate",
+      "uom": { "code": "Hz" },
+      "value": 0.1
+    }
+  ]
+}

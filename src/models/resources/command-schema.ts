@@ -19,7 +19,7 @@ const SweCsvEncodingSchema = z.looseObject({
 });
 
 /** Schema for control stream content encoded as SWE Common (JSON/Text/CSV/Binary framing). */
-export const CommandSchemaSweSchema = z.union([
+export const CommandSchemaSweSchema = z.discriminatedUnion("commandFormat", [
   z.looseObject({ commandFormat: z.literal("application/swe+json"), recordSchema: AnyComponentSchema, encoding: JSONEncodingSchema }),
   z.looseObject({ commandFormat: z.literal("application/swe+text"), recordSchema: AnyComponentSchema, encoding: TextEncodingSchema }),
   z.looseObject({ commandFormat: z.literal("application/swe+csv"), recordSchema: AnyComponentSchema, encoding: SweCsvEncodingSchema }),
@@ -48,11 +48,28 @@ export const CommandSchemaAnyOtherSchema = z.looseObject({
 });
 export type CommandSchemaAnyOther = z.infer<typeof CommandSchemaAnyOtherSchema>;
 
-/** ControlStream `schema` (GET .../schema?cmdFormat=...): a union discriminated by `commandFormat`. */
-export const CommandSchemaDescriptorSchema = z.union([
+const KnownCommandSchemaSchema = z.discriminatedUnion("commandFormat", [
   CommandSchemaJsonSchema,
-  CommandSchemaSweSchema,
+  ...CommandSchemaSweSchema.options,
   CommandSchemaProtobufSchema,
-  CommandSchemaAnyOtherSchema,
 ]);
-export type CommandSchemaDescriptor = z.infer<typeof CommandSchemaDescriptorSchema>;
+
+/**
+ * ControlStream `schema` (GET .../schema?cmdFormat=...).
+ *
+ * Routes on `commandFormat` by hand rather than via a single `z.union`/`z.discriminatedUnion`:
+ * the catch-all branch (`CommandSchemaAnyOtherSchema`) matches any *unrecognized* format string,
+ * which isn't expressible as a literal discriminator. Doing the routing manually also means a
+ * payload with a known `commandFormat` that fails validation for some other reason (e.g. a
+ * missing nested field) reports that specific nested error instead of Zod's generic "no union
+ * member matched" message.
+ */
+export const CommandSchemaDescriptorSchema: z.ZodType<CommandSchemaDescriptor> = z.custom<CommandSchemaDescriptor>().superRefine((value, ctx) => {
+  const commandFormat = (value as { commandFormat?: unknown } | null | undefined)?.commandFormat;
+  const isKnownFormat = typeof commandFormat === "string" && (KNOWN_CMD_FORMATS as readonly string[]).includes(commandFormat);
+  const result = isKnownFormat ? KnownCommandSchemaSchema.safeParse(value) : CommandSchemaAnyOtherSchema.safeParse(value);
+  if (!result.success) {
+    for (const issue of result.error.issues) ctx.addIssue(issue as z.core.$ZodSuperRefineIssue);
+  }
+});
+export type CommandSchemaDescriptor = CommandSchemaJson | CommandSchemaSwe | CommandSchemaProtobuf | CommandSchemaAnyOther;

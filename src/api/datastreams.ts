@@ -94,8 +94,8 @@ export class DataStreamsApi {
     await this.http.request("PUT", `/datastreams/${id}`, { body: dataStream, contentType: MediaTypes.json });
   }
 
-  async delete(id: string): Promise<void> {
-    await this.http.request("DELETE", `/datastreams/${id}`);
+  async delete(id: string, opts: { cascade?: boolean } = {}): Promise<void> {
+    await this.http.request("DELETE", `/datastreams/${id}`, { query: opts.cascade === undefined ? undefined : { cascade: opts.cascade } });
   }
 
   /** `obsFormat` is required by the spec — the schema shape returned depends on it. */
@@ -123,5 +123,13 @@ export class DataStreamsApi {
   async createObservation(id: string, observation: ObservationCreate): Promise<string> {
     const validated = ObservationCreateSchema.parse(observation);
     return this.http.create(`/datastreams/${id}/observations`, validated, { contentType: MediaTypes.json });
+  }
+
+  /** Post an observation already encoded according to the selected datastream format. */
+  async createEncodedObservation(id: string, payload: unknown, obsFormat: string): Promise<string> {
+    return this.http.create(`/datastreams/${id}/observations`, payload, {
+      contentType: obsFormat,
+      serializeBody: obsFormat.includes("json"),
+    });
   }
 }
